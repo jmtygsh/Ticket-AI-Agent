@@ -1,5 +1,5 @@
-import { inngest } from "../inngest/client";
-import Ticket from "../models/ticket.model";
+import { inngest } from "../inngest/client.js";
+import Ticket from "../models/ticket.model.js";
 
 export const createTicket = async (req, res) => {
   try {
@@ -38,11 +38,15 @@ export const createTicket = async (req, res) => {
 };
 
 export const getTickets = async (req, res) => {
+  console.log("check response");
+  console.log(req);
+  console.log("end check response");
+
   try {
     const user = req.user;
     let tickets = [];
     if (user.role !== "user") {
-      tickets = Ticket.find({})
+      tickets = await Ticket.find({})
         .populate("assignedTo", ["email", "_id"])
         .sort({ createdAt: -1 });
     } else {
@@ -50,6 +54,11 @@ export const getTickets = async (req, res) => {
         .select("title description status createdAt")
         .sort({ createdAt: -1 });
     }
+
+    console.log("--------------ticket backend check ---------------");
+    console.log(tickets);
+    console.log("--------------------end ticket backend check ---------------");
+
     return res.status(200).json(tickets);
   } catch (error) {
     console.error("Error fetching tickets", error.message);

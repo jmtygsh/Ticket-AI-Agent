@@ -1,20 +1,36 @@
 import bcrypt from "bcrypt";
-import jwt, { decode } from "jsonwebtoken";
-import { User } from "../models/user.model";
-import { inngest } from "../inngest/client";
+import jwt from "jsonwebtoken";
+import User from "../models/user.model.js";
+import { inngest } from "../inngest/client.js";
 
 export const signUp = async (req, res) => {
-  const { email, password, skills = [] } = req.body;
   try {
-    const hashed = bcrypt.hash(password, 10);
+    const { email, password, skills = [] } = req.body;
+
+    // 1. Check for missing email or password
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ error: "Email and password are required." });
+    }
+
+    // 2. Check if a user with this email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res
+        .status(409)
+        .json({ error: "User with this email already exists." });
+    }
+
+    // 3. Await the hashing process (THIS IS THE FIX)
+    const hashed = await bcrypt.hash(password, 10);
+
     const user = await User.create({ email, password: hashed, skills });
 
     // fire inngest event
     await inngest.send({
       name: "user/signup",
-      data: {
-        email,
-      },
+      data: { email },
     });
 
     const token = jwt.sign(
@@ -22,8 +38,9 @@ export const signUp = async (req, res) => {
       process.env.JWT_SECRET
     );
 
-    res.json({ user, token });
+    res.status(201).json({ user, token }); // Use 201 Created for new resources
   } catch (error) {
+    console.error("SIGNUP FAILED:", error); // Log the full error on the server
     res.status(500).json({ error: "Signup failed", details: error.message });
   }
 };

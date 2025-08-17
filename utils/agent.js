@@ -49,15 +49,22 @@ Ticket information:
 - Title: ${ticket.title}
 - Description: ${ticket.description}`);
 
-  const raw = response.output[0].context;
+  // FIX: Access the content from the first element of the output array
+  const raw = response.output[0].content;
+
+  console.log(raw);
 
   try {
+    // This regex is needed because the AI is wrapping the response in markdown
     const match = raw.match(/```json\s*([\s\S]*?)\s*```/i);
+
+    // If a match is found, use the extracted part; otherwise, use the whole string
     const jsonString = match ? match[1] : raw.trim();
     return JSON.parse(jsonString);
   } catch (e) {
-    console.log("Failed to parse JSON from AI response" + e.message);
-    return null; // watch out for this
+    console.error("Failed to parse JSON. Raw content:", raw);
+    console.error("Parsing Error:", e.message);
+    return null;
   }
 };
 
